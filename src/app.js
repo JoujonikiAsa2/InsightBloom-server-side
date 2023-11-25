@@ -1,5 +1,6 @@
 const express = require('express')
 const applyMiddlewares = require('./middlewares/applyMiddlewares')
+const globalErrorHandler = require('./utils/globalErrorhandle')
 const app = express()
 const port = process.env.PORT || 5000
 
@@ -9,8 +10,7 @@ applyMiddlewares(app)
 
 // Check if the server is running  
 app.get('/health', (req, res) => {
-    hjadgff
-    res.send('Hello World!')
+    res.send('InsightBloom is running.........')
 })
 
 // handle error for all method 
@@ -20,12 +20,8 @@ app.all("*", (req, res, next)=>{
     next(error)
 })
 
-// pass the error here
-app.use((err, req, res, next)=>{
-    res.status(err.status || 500 ).send({
-        messsage : err.message
-    })
-})
+// error handler
+app.use(globalErrorHandler);
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}!`)
