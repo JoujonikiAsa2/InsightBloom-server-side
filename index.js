@@ -7,6 +7,10 @@ const port = process.env.PORT || 5000
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ghkhwep.mongodb.net/?retryWrites=true&w=majority`;
 
+// middleware
+
+app.use(cors())
+app.use(express.json())
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -23,6 +27,8 @@ async function run() {
 
     const postsCollection = client.db('forumDatabase').collection('posts')
 
+    // get request for all tags o
+
     app.get('/posts', async (req, res) => {
       const result = await postsCollection.find().toArray()
       res.send(result)
@@ -37,7 +43,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => {
-  res.send('Hello World!')
+  // res.send('Hello World!')
 })
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`))
