@@ -8,6 +8,7 @@ const allPostsRoutes = require('./routes/allPosts')
 const uniquePostsRoutes = require('./routes/uniqueTag')
 const popularPosts = require('./routes/popularPosts')
 const totalPost = require('./routes/totalPostCount')
+const specificPost = require('./routes/specificPost')
 
 
 // import the middlewares
@@ -26,9 +27,7 @@ app.use('/api',popularPosts)
 app.use('/api', totalPost )
 
 // Check if the server is running  
-app.get('/health', (req, res) => {
-    res.send('InsightBloom is running.........')
-})
+app.use('/api',specificPost )
 
 // handle error for all method 
 app.all("*", (req, res, next)=>{
@@ -39,6 +38,12 @@ app.all("*", (req, res, next)=>{
 
 // error handler
 app.use(globalErrorHandler);
+
+// Check if the server is running  
+app.get('/health', (req, res) => {
+    res.send('InsightBloom is running.........')
+})
+
 
 const main=async ()=>{
     await connectDB()
