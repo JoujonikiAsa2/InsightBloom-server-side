@@ -6,6 +6,8 @@ const app = express()
 const port = process.env.PORT || 5000
 const allPostsRoutes = require('./routes/allPosts')
 const uniquePostsRoutes = require('./routes/uniqueTag')
+const popularPosts = require('./routes/popularPosts')
+const totalPost = require('./routes/totalPostCount')
 
 
 // import the middlewares
@@ -13,7 +15,15 @@ applyMiddlewares(app)
 
 // get all post
 app.use('/api',allPostsRoutes)
+
+// get all unique tag
 app.use('/api',uniquePostsRoutes)
+
+// get all ppopularPost
+app.use('/api',popularPosts)
+
+// get total count for all post
+app.use('/api', totalPost )
 
 // Check if the server is running  
 app.get('/health', (req, res) => {
@@ -33,7 +43,7 @@ app.use(globalErrorHandler);
 const main=async ()=>{
     await connectDB()
     app.listen(port, () => {
-        console.log(`Car Doctor Server is running on port ${port}`);
+        console.log(`InsightBloom Server is running on port ${port}`);
     });
    
 }
