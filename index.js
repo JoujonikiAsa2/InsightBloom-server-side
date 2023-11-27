@@ -3,7 +3,7 @@ const app = express()
 const cors = require('cors')
 require("dotenv").config()
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const port = process.env.PORT || 5000
+const port = process.env.PORT || 5001
 
 app.use(cors());
 app.use(express.json())
@@ -23,6 +23,10 @@ const client = new MongoClient(uri, {
   }
 });
 
+
+app.get('/', (req, res) => {
+  res.send('Hey! InsightBloom in running..........')
+})
 
 async function run() {
   try {
@@ -55,6 +59,12 @@ async function run() {
       }
     });
 
+
+    // to get all post
+    app.get("/post", async (req, res) => {
+      const posts = await postsCollection.find().toArray()
+      res.send(posts)
+    })
 
     // to get all post
     app.get("/api/post", async (req, res) => {
@@ -91,6 +101,14 @@ async function run() {
       }
     });
 
+    // post  a post
+    app.post("/api/post", async (req, res) => {
+      const post = req.body
+      const result = await postsCollection.insertOne(post)
+      res.send(result)
+    })
+
+
     // create unique user profile at database
     app.post('/users', async (req, res) => {
       try {
@@ -119,7 +137,23 @@ async function run() {
       res.send(result)
     })
 
-    app.patch('api/post/:id', async (req, res) => {
+    // post of each user
+    app.get('/post/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { authorEmail: email };
+
+      try {
+        const postsCursor = postsCollection.find(query);
+        const posts = await postsCursor.sort({time: -1}).toArray();;
+        console.log(posts);
+        res.send(posts);
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    app.patch('/api/post/:id', async (req, res) => {
       const id = req.params.id
       const post = req.body
       const filter = { _id: new ObjectId(id) }
@@ -216,14 +250,33 @@ async function run() {
       try {
         const email = req.params.email
         console.log(email)
-        const filter = {email: email}
+        const filter = { email: email }
         const result = await userCollections.findOne(filter)
+        console.log("Dashboard email is here ")
         res.send(result)
       } catch (error) {
-        console.log("Failed to added a user role: ", error)
+        console.log("Dashboard email is here ", error)
+      }
+    })
+
+    app.get('/users/adminRoll/:email', async (req, res) => {
+      try {
+        const email = req.params.email;
+
+        const query = { email: email };
+        const user = await userCollections.findOne(query);
+        let admin = false;
+        if (user) {
+          admin = user?.role === 'admin';
+        }
+        res.send({ admin });
+      } catch (error) {
+        console.log("Can not get admin data by email: ", error)
 
       }
     })
+
+
     app.patch('/users/:id', async (req, res) => {
       try {
         const id = req.params.id
@@ -241,6 +294,8 @@ async function run() {
 
       }
     })
+
+
     // handle error for all method 
     app.all("*", (req, res, next) => {
       const error = new Error(`The requested [${req.url}] is invalid`)
