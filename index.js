@@ -2,10 +2,13 @@ const express = require('express')
 const app = express()
 const cors = require('cors')
 require("dotenv").config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000
 
 app.use(cors());
 app.use(express.json())
+
+
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DATABASE_LOCAL_USERNAME}:${process.env.DATABASE_LOCAL_PASSWORD}@cluster0.ghkhwep.mongodb.net/?retryWrites=true&w=majority`;
@@ -26,6 +29,7 @@ async function run() {
     const postsCollection = client.db('forumDatabase').collection('posts')
     const commentsCollection = client.db('forumDatabase').collection('comments')
     const usersCollection = client.db('forumDatabase').collection('users')
+    const paymentCollections = client.db('forumDatabase').collection('payments')
 
     // get the popular post
     app.get('/api/post/popular', async (req, res) => {
@@ -78,9 +82,9 @@ async function run() {
         const tags = await postsCollection.aggregate([
           { $group: { _id: '$tag' } }
         ]).toArray();
-    
+
         const distinctTags = tags.map(tag => tag._id);
-    
+
         res.send(distinctTags);
       } catch (error) {
         res.status(500).json({ error: 'Internal Server Error' });
@@ -90,23 +94,23 @@ async function run() {
     // create unique user profile at database
     app.post('/users', async (req, res) => {
       try {
-          const user = req.body
-          console.log("User hit here")
-          const query = { email: user.email }
-          const existingUser = await usersCollection.findOne(query)
-          if (existingUser) {
-              return res.send({ message: "User already exists", insertedId: null })
-          }
-          const result = await usersCollection.insertOne(user)
-          res.send(result)
+        const user = req.body
+        console.log("User hit here")
+        const query = { email: user.email }
+        const existingUser = await usersCollection.findOne(query)
+        if (existingUser) {
+          return res.send({ message: "User already exists", insertedId: null })
+        }
+        const result = await usersCollection.insertOne(user)
+        res.send(result)
       }
       catch {
-          error => {
-              console.log("Added data to user has an error: ", error)
-          }
+        error => {
+          console.log("Added data to user has an error: ", error)
+        }
       }
-  })
-    
+    })
+
     // individual post find
     app.get('/api/post/:id', async (req, res) => {
       const id = req.params.id
@@ -150,6 +154,49 @@ async function run() {
       const result = await commentsCollection.find(query).toArray()
       res.send(result)
     })
+
+    // allPayment
+    app.post('/create-payment-intent', async (req, res) => {
+      try {
+        const { price } = req.body
+        const amount = parseInt(price * 100)
+
+        console.log("Amount inside cart", amount)
+
+        // Create a PaymentIntent with the order amount and currency
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: 'usd',
+          payment_method_types: ['card']
+        })
+
+        res.send(
+          {
+            clientSecret: paymentIntent.client_secret
+          })
+      }
+      catch {
+        error => console.log(error)
+      }
+    })
+
+    app.get('/payments/:email', async (req, res) => {
+      const query = { email: req.params.email }
+      if (req.params.email !== req.decoded.email) {
+        return res.status(403).send({ message: 'Forbidden Access' })
+      }
+      const result = await paymentCollections.find(query).toArray()
+      res.send(result)
+    })
+
+    app.post('/payments', async (req, res) => {
+      console.log("Yes user hit the payment post")
+      const payment = req.body;
+      const paymentResult = await paymentCollections.insertOne(payment);
+      console.log('payment info', payment);
+      res.send({ paymentResult })
+    })
+
 
 
     // handle error for all method 
