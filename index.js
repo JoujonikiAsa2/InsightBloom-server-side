@@ -28,7 +28,7 @@ async function run() {
   try {
     const postsCollection = client.db('forumDatabase').collection('posts')
     const commentsCollection = client.db('forumDatabase').collection('comments')
-    const usersCollection = client.db('forumDatabase').collection('users')
+    const userCollections = client.db('forumDatabase').collection('users')
     const paymentCollections = client.db('forumDatabase').collection('payments')
 
     // get the popular post
@@ -97,11 +97,11 @@ async function run() {
         const user = req.body
         console.log("User hit here")
         const query = { email: user.email }
-        const existingUser = await usersCollection.findOne(query)
+        const existingUser = await userCollections.findOne(query)
         if (existingUser) {
           return res.send({ message: "User already exists", insertedId: null })
         }
-        const result = await usersCollection.insertOne(user)
+        const result = await userCollections.insertOne(user)
         res.send(result)
       }
       catch {
@@ -199,6 +199,48 @@ async function run() {
 
 
 
+    // user
+    app.get("/users", async (req, res) => {
+      try {
+        // console.log(req.headers)
+        const users = userCollections.find()
+        const result = await users.toArray()
+        res.send(result)
+      } catch (error) {
+        console.log("Can not get data from users: ", error)
+
+      }
+    })
+
+    app.get('/users/email/:email', async (req, res) => {
+      try {
+        const email = req.params.email
+        console.log(email)
+        const filter = {email: email}
+        const result = await userCollections.findOne(filter)
+        res.send(result)
+      } catch (error) {
+        console.log("Failed to added a user role: ", error)
+
+      }
+    })
+    app.patch('/users/:id', async (req, res) => {
+      try {
+        const id = req.params.id
+        console.log(id)
+        const filter = { _id: new ObjectId(id) }
+        const updatedDoc = {
+          $set: {
+            membership: 'Gold',
+          }
+        }
+        const result = await userCollections.updateOne(filter, updatedDoc)
+        res.send(result)
+      } catch (error) {
+        console.log("Failed to added a user role: ", error)
+
+      }
+    })
     // handle error for all method 
     app.all("*", (req, res, next) => {
       const error = new Error(`The requested [${req.url}] is invalid`)
