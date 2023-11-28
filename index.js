@@ -34,6 +34,7 @@ async function run() {
     const commentsCollection = client.db('forumDatabase').collection('comments')
     const userCollections = client.db('forumDatabase').collection('users')
     const paymentCollections = client.db('forumDatabase').collection('payments')
+    const announcementCollections = client.db('forumDatabase').collection('announcements')
 
     // get the popular post
     app.get('/api/post/popular', async (req, res) => {
@@ -384,6 +385,17 @@ async function run() {
       const users = res.body
       const totalUser = await userCollections.estimatedDocumentCount(users)
       res.send({totalUser: totalUser})
+    })
+
+    // post an announcement post
+    app.post("/api/announcement", async (req, res) => {
+      try {
+        const announcement = req.body
+        const result = await announcementCollections.insertOne(announcement)
+        res.send(result)
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
     })
 
 
