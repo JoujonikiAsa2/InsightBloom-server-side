@@ -413,6 +413,36 @@ async function run() {
       res.send(result)
     })
 
+    app.get("/api/reports", async(req,res)=>{
+      const report =  req.body
+      const result = await reportCollection.find().toArray()
+      res.send(result)
+    })
+    app.patch("/api/reports/:id", async(req,res)=>{
+      const id =  req.params.id
+      const filter = {_id: new ObjectId(id)}
+      const updatedDOc = {
+        $set:{
+          action: "deleted"
+        }
+      }
+      const result = await reportCollection.updateOne(filter,updatedDOc)
+      res.send(result)
+    })
+
+     app.delete('/api/comments/:comment_id', async (req, res) => {
+      try {
+        const comment_id = req.params.comment_id
+        console.log(comment_id)
+        const query = { _id: new ObjectId(comment_id) }
+        const result = await commentsCollection.deleteOne(query)
+        res.send(result)
+      }
+      catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+
+      }
+    })
     // handle error for all method 
     app.all("*", (req, res, next) => {
       const error = new Error(`The requested [${req.url}] is invalid`)
