@@ -35,6 +35,7 @@ async function run() {
     const userCollections = client.db('forumDatabase').collection('users')
     const paymentCollections = client.db('forumDatabase').collection('payments')
     const announcementCollections = client.db('forumDatabase').collection('announcements')
+    const reportCollection = client.db('forumDatabase').collection('reports')
 
     // get the popular post
     app.get('/api/post/popular', async (req, res) => {
@@ -330,7 +331,7 @@ async function run() {
 
       }
     })
-    
+
     app.patch('/users/admin/:name', async (req, res) => {
       try {
         const name = req.params.name
@@ -366,25 +367,25 @@ async function run() {
       }
     })
 
-    app.delete('/api/post/:id', async(req,res)=>{
+    app.delete('/api/post/:id', async (req, res) => {
       const id = req.params.id
-      const filter = {_id: new ObjectId(id)}
+      const filter = { _id: new ObjectId(id) }
       const result = await postsCollection.deleteOne(filter)
       res.send(result)
     })
 
     // nummber of comment
-    app.get('/commentCount', async( req,res)=>{
-      const comments= res.body
+    app.get('/commentCount', async (req, res) => {
+      const comments = res.body
       const totalComment = await commentsCollection.estimatedDocumentCount(comments)
-      res.send({totalComment: totalComment})
+      res.send({ totalComment: totalComment })
     })
 
     // nummber of user
-    app.get('/userCount', async( req,res)=>{
+    app.get('/userCount', async (req, res) => {
       const users = res.body
       const totalUser = await userCollections.estimatedDocumentCount(users)
-      res.send({totalUser: totalUser})
+      res.send({ totalUser: totalUser })
     })
 
     // post an announcement post
@@ -398,6 +399,19 @@ async function run() {
       }
     })
 
+    // get announcement
+    app.get("/api/announcement", async (req, res) => {
+
+      const announcement = announcementCollections.find()
+      const result = await announcement.toArray()
+      res.send(result)
+    })
+
+    app.post("/api/reports", async(req,res)=>{
+      const report =  req.body
+      const result = await reportCollection.insertOne(report)
+      res.send(result)
+    })
 
     // handle error for all method 
     app.all("*", (req, res, next) => {
