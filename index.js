@@ -62,28 +62,42 @@ async function run() {
 
     // to get all post
     app.get("/post", async (req, res) => {
-      const posts = await postsCollection.find().toArray()
-      res.send(posts)
+      try {
+        const posts = await postsCollection.find().toArray()
+        res.send(posts)
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
     })
 
     // to get all post
     app.get("/api/post", async (req, res) => {
       const page = parseInt(req.query.page)
       const size = parseInt(req.query.size)
-      const posts = await postsCollection.find()
-        .skip(page * size)
-        .limit(size)
-        .sort({ time: -1 })
-        .toArray()
-      res.send(posts)
-      console.log("pagination", req.query, page, size)
+      try {
+        const posts = await postsCollection.find()
+          .skip(page * size)
+          .limit(size)
+          .sort({ time: -1 })
+          .toArray()
+        res.send(posts)
+        console.log("pagination", req.query, page, size)
+      }
+      catch {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
     })
 
     // totalPost count used for pagination
     app.get('/api/totalPost', async (req, res) => {
-      const post = req.body
-      const result = await postsCollection.estimatedDocumentCount(post)
-      res.send({ totalPost: result })
+      try {
+        const post = req.body
+        const result = await postsCollection.estimatedDocumentCount(post)
+        res.send({ totalPost: result })
+      }
+      catch {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
     })
 
     // get all distinct tags
@@ -103,9 +117,13 @@ async function run() {
 
     // post  a post
     app.post("/api/post", async (req, res) => {
-      const post = req.body
-      const result = await postsCollection.insertOne(post)
-      res.send(result)
+      try {
+        const post = req.body
+        const result = await postsCollection.insertOne(post)
+        res.send(result)
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
     })
 
 
@@ -131,10 +149,14 @@ async function run() {
 
     // individual post find
     app.get('/api/post/:id', async (req, res) => {
-      const id = req.params.id
-      const query = { _id: new ObjectId(id) }
-      const result = await postsCollection.findOne(query)
-      res.send(result)
+      try {
+        const id = req.params.id
+        const query = { _id: new ObjectId(id) }
+        const result = await postsCollection.findOne(query)
+        res.send(result)
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
     })
 
     // post of each user
@@ -143,13 +165,14 @@ async function run() {
       const query = { authorEmail: email };
 
       try {
+
         const postsCursor = postsCollection.find(query);
-        const posts = await postsCursor.sort({time: -1}).toArray();;
-        console.log(posts);
+        const posts = await postsCursor.sort({ time: -1 }).toArray();
         res.send(posts);
+
       } catch (error) {
-        console.error('Error fetching posts:', error);
         res.status(500).json({ error: 'Internal Server Error' });
+
       }
     });
 
@@ -157,36 +180,56 @@ async function run() {
       const id = req.params.id
       const post = req.body
       const filter = { _id: new ObjectId(id) }
-      const updatedDOc = {
-        $set: {
-          upVote: post.upVote,
-          downVote: post.downVote
+      try {
+        const updatedDOc = {
+          $set: {
+            upVote: post.upVote,
+            downVote: post.downVote
+          }
         }
+        const result = await postsCollection.updateOne(filter, updatedDOc)
+        console.log(result, post.upVote, post.downVote)
+        res.send(result)
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
       }
-      const result = await postsCollection.updateOne(filter, updatedDOc)
-      console.log(result, post.upVote, post.downVote)
-      res.send(result)
     })
 
     // post api for comment
     app.post('/api/comments', async (req, res) => {
-      const comment = req.body
-      const result = await commentsCollection.insertOne(comment)
-      res.send(result)
+      try {
+        const comment = req.body
+        const result = await commentsCollection.insertOne(comment)
+        res.send(result)
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
     })
 
     // get all comment data
     app.get('/api/comments', async (req, res) => {
-      const comment = await commentsCollection.find().toArray()
-      res.send(comment)
+      try {
+        const comment = await commentsCollection.find().toArray()
+        res.send(comment)
+      }
+      catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+
+      }
     })
 
     // get comment data by post
     app.get('/api/comments/post/:post_id', async (req, res) => {
-      const post_id = req.params.post_id
-      const query = { post_id: post_id }
-      const result = await commentsCollection.find(query).toArray()
-      res.send(result)
+      try {
+        const post_id = req.params.post_id
+        const query = { post_id: post_id }
+        const result = await commentsCollection.find(query).toArray()
+        res.send(result)
+      }
+      catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+
+      }
     })
 
     // allPayment
@@ -216,19 +259,30 @@ async function run() {
 
     app.get('/payments/:email', async (req, res) => {
       const query = { email: req.params.email }
-      if (req.params.email !== req.decoded.email) {
-        return res.status(403).send({ message: 'Forbidden Access' })
+      try {
+        if (req.params.email !== req.decoded.email) {
+          return res.status(403).send({ message: 'Forbidden Access' })
+        }
+        const result = await paymentCollections.find(query).toArray()
+        res.send(result)
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+
       }
-      const result = await paymentCollections.find(query).toArray()
-      res.send(result)
     })
 
     app.post('/payments', async (req, res) => {
-      console.log("Yes user hit the payment post")
-      const payment = req.body;
-      const paymentResult = await paymentCollections.insertOne(payment);
-      console.log('payment info', payment);
-      res.send({ paymentResult })
+      try {
+        console.log("Yes user hit the payment post")
+        const payment = req.body;
+        const paymentResult = await paymentCollections.insertOne(payment);
+        console.log('payment info', payment);
+        res.send({ paymentResult })
+      }
+      catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+
+      }
     })
 
 
@@ -275,7 +329,23 @@ async function run() {
 
       }
     })
+    
+    app.patch('/users/admin/:name', async (req, res) => {
+      try {
+        const name = req.params.name
+        const filter = { name: name }
+        const updatedDoc = {
+          $set: {
+            role: 'admin',
+          }
+        }
+        const result = await userCollections.updateOne(filter, updatedDoc)
+        res.send(result)
+      } catch (error) {
+        console.log("Something is wrong: ", error)
 
+      }
+    })
 
     app.patch('/users/:id', async (req, res) => {
       try {
@@ -293,6 +363,27 @@ async function run() {
         console.log("Failed to added a user role: ", error)
 
       }
+    })
+
+    app.delete('/api/post/:id', async(req,res)=>{
+      const id = req.params.id
+      const filter = {_id: new ObjectId(id)}
+      const result = await postsCollection.deleteOne(filter)
+      res.send(result)
+    })
+
+    // nummber of comment
+    app.get('/commentCount', async( req,res)=>{
+      const comments= res.body
+      const totalComment = await commentsCollection.estimatedDocumentCount(comments)
+      res.send({totalComment: totalComment})
+    })
+
+    // nummber of user
+    app.get('/userCount', async( req,res)=>{
+      const users = res.body
+      const totalUser = await userCollections.estimatedDocumentCount(users)
+      res.send({totalUser: totalUser})
     })
 
 
