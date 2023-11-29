@@ -2,6 +2,7 @@ const express = require('express')
 const app = express()
 const cors = require('cors')
 require("dotenv").config()
+const jwt = require('jsonwebtoken')
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5001
 
@@ -28,6 +29,40 @@ app.get('/', (req, res) => {
   res.send('Hey! InsightBloom in running..........')
 })
 
+// middleWares
+
+const verifyToken = (req, res, next) => {
+  // console.log("Inside verifyToken: ", req.headers)
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: 'Unauthorized' })
+  }
+  const token = req.headers.authorization.split(' ')[1]
+
+  // verify the token
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).send({ message: 'Forbidden' })
+    }
+    req.decoded = decoded
+    console.log("decoded value is:", req.decoded)
+
+    next()
+  })
+
+}
+
+const adminVerify = async (req, res, next) => {
+  const email = req.decoded.email;
+  const query = { email: email }
+  const user = await userCollections.findOne(query)
+  const isAdmin = user?.role === 'admin'
+  if (!isAdmin) {
+    return res.status(403).send({ message: "Forbidden Access" })
+  }
+  next()
+}
+
 async function run() {
   try {
     const postsCollection = client.db('forumDatabase').collection('posts')
@@ -37,6 +72,14 @@ async function run() {
     const announcementCollections = client.db('forumDatabase').collection('announcements')
     const reportCollection = client.db('forumDatabase').collection('reports')
     const searchCollections = client.db('forumDatabase').collection('search')
+    const tagCollections = client.db('forumDatabase').collection('tags')
+
+    // Create jwt for secure api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body
+      const token = jwt.sign(user /*payload which data we want to store*/, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+      res.send({ token })
+    })
 
     // get the popular post
     app.get('/api/post/popular', async (req, res) => {
@@ -106,7 +149,7 @@ async function run() {
     // get all distinct tags
     app.get("/api/tags", async (req, res) => {
       try {
-        const tags = await postsCollection.aggregate([
+        const tags = await tagCollections.aggregate([
           { $group: { _id: '$tag' } }
         ]).toArray();
 
@@ -494,19 +537,16 @@ async function run() {
       res.send(result)
     })
 
+    app.post('/tags', async (req, res) => {
+      const tags = req.body
+      const result = await tagCollections.insertOne(tags)
+      res.send(result)
+    })
 
-    // app.get('/api/search/:tag', async(req,res)=>{
-    //   const tag = req.params.tag
-    //   const filter = {search_tag: tag}
-    //   try {
-    //     const searchResult = await searchCollections.countDocuments(filter)
-    //     res.send({totalSearch: searchResult})
-    //     // console.log("pagination", req.query, page, size)
-    //   }
-    //   catch {
-    //     res.status(500).json({ error: 'Internal Server Error' });
-    //   }
-    // })
+    app.get('/tags', async (req, res) => {
+      const result = await tagCollections.find().toArray()
+      res.send(result)
+    })
 
 
     // handle error for all method 
