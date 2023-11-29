@@ -36,6 +36,7 @@ async function run() {
     const paymentCollections = client.db('forumDatabase').collection('payments')
     const announcementCollections = client.db('forumDatabase').collection('announcements')
     const reportCollection = client.db('forumDatabase').collection('reports')
+    const searchCollections = client.db('forumDatabase').collection('search')
 
     // get the popular post
     app.get('/api/post/popular', async (req, res) => {
@@ -407,30 +408,37 @@ async function run() {
       res.send(result)
     })
 
-    app.post("/api/reports", async(req,res)=>{
-      const report =  req.body
+    // get announcement count
+    app.get('/announcementCount', async (req, res) => {
+      const announcements = res.body
+      const totalAnnouncement = await announcementCollections.estimatedDocumentCount(announcements)
+      res.send({ totalAnnouncement: totalAnnouncement })
+    })
+
+    app.post("/api/reports", async (req, res) => {
+      const report = req.body
       const result = await reportCollection.insertOne(report)
       res.send(result)
     })
 
-    app.get("/api/reports", async(req,res)=>{
-      const report =  req.body
+    app.get("/api/reports", async (req, res) => {
+      const report = req.body
       const result = await reportCollection.find().toArray()
       res.send(result)
     })
-    app.patch("/api/reports/:id", async(req,res)=>{
-      const id =  req.params.id
-      const filter = {_id: new ObjectId(id)}
+    app.patch("/api/reports/:id", async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
       const updatedDOc = {
-        $set:{
+        $set: {
           action: "deleted"
         }
       }
-      const result = await reportCollection.updateOne(filter,updatedDOc)
+      const result = await reportCollection.updateOne(filter, updatedDOc)
       res.send(result)
     })
 
-     app.delete('/api/comments/:comment_id', async (req, res) => {
+    app.delete('/api/comments/:comment_id', async (req, res) => {
       try {
         const comment_id = req.params.comment_id
         console.log(comment_id)
@@ -443,6 +451,64 @@ async function run() {
 
       }
     })
+
+
+    app.get('/posts/:tag', async (req, res) => {
+      const page = parseInt(req.query.page)
+      const size = parseInt(req.query.size)
+      const tag = req.params.tag
+      const filter = { tag: tag }
+      try {
+        const posts = await postsCollection.find(filter)
+          .skip(page * size)
+          .limit(size)
+          .sort({ time: -1 })
+          .toArray()
+        res.send(posts)
+        console.log("pagination", req.query, page, size)
+      }
+      catch {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    })
+
+
+    app.get('/searchResult/:tag', async (req, res) => {
+      const page = parseInt(req.query.page)
+      const size = parseInt(req.query.size)
+      const tag = req.params.tag
+      const filter = { tag: tag }
+      try {
+        const searchResult = await postsCollection.countDocuments(filter)
+        res.send({ totalPost: searchResult })
+        // console.log("pagination", req.query, page, size)
+      }
+      catch {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    })
+
+    app.post('/api/search', async (req, res) => {
+      const searchValue = req.body
+      const result = await searchCollections.insertOne(searchValue)
+      res.send(result)
+    })
+
+
+    // app.get('/api/search/:tag', async(req,res)=>{
+    //   const tag = req.params.tag
+    //   const filter = {search_tag: tag}
+    //   try {
+    //     const searchResult = await searchCollections.countDocuments(filter)
+    //     res.send({totalSearch: searchResult})
+    //     // console.log("pagination", req.query, page, size)
+    //   }
+    //   catch {
+    //     res.status(500).json({ error: 'Internal Server Error' });
+    //   }
+    // })
+
+
     // handle error for all method 
     app.all("*", (req, res, next) => {
       const error = new Error(`The requested [${req.url}] is invalid`)
